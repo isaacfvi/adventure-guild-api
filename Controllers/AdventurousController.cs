@@ -68,9 +68,9 @@ public class AdventurousController : ControllerBase
 
         return result switch
         {
-            UpdateAdventurousResult.NotFound => NotFound(),
-            UpdateAdventurousResult.NoFields => BadRequest("No fields to update."),
-            UpdateAdventurousResult.Updated => NoContent(),
+            RestResult.NotFound => NotFound(),
+            RestResult.NoFields => BadRequest("No fields to update."),
+            RestResult.Updated => NoContent(),
             _ => StatusCode(500)
         };
     }

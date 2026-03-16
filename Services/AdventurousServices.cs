@@ -55,7 +55,7 @@ public class AdventurousService
         return result.MatchedCount > 0;
     }
 
-    public async Task<UpdateAdventurousResult> UpdateAdventurous(Guid id, PatchAdventurousRequest request)
+    public async Task<RestResult> UpdateAdventurous(Guid id, PatchAdventurousRequest request)
     {
         var updates = new List<UpdateDefinition<Adventurous>>();
 
@@ -69,7 +69,7 @@ public class AdventurousService
             updates.Add(Builders<Adventurous>.Update.Set(m => m.Level, request.Level.Value));
 
         if (updates.Count == 0)
-            return UpdateAdventurousResult.NoFields;
+            return RestResult.NoFields;
 
         var updateDefinition = Builders<Adventurous>.Update.Combine(updates);
 
@@ -79,9 +79,9 @@ public class AdventurousService
         );
 
         if (result.MatchedCount == 0)
-            return UpdateAdventurousResult.NotFound;
+            return RestResult.NotFound;
 
-        return UpdateAdventurousResult.Updated;
+        return RestResult.Updated;
     }
 
     

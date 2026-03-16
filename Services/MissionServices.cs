@@ -57,7 +57,7 @@ public class MissionService
         return result.MatchedCount > 0;
     }
 
-    public async Task<UpdateMissionResult> UpdateMission(Guid id, PatchMissionRequest request)
+    public async Task<RestResult> UpdateMission(Guid id, PatchMissionRequest request)
     {
         var updates = new List<UpdateDefinition<Mission>>();
 
@@ -74,7 +74,7 @@ public class MissionService
             updates.Add(Builders<Mission>.Update.Set(m => m.Status, request.Status.Value));
 
         if (updates.Count == 0)
-            return UpdateMissionResult.NoFields;
+            return RestResult.NoFields;
 
         var updateDefinition = Builders<Mission>.Update.Combine(updates);
 
@@ -84,9 +84,9 @@ public class MissionService
         );
 
         if (result.MatchedCount == 0)
-            return UpdateMissionResult.NotFound;
+            return RestResult.NotFound;
 
-        return UpdateMissionResult.Updated;
+        return RestResult.Updated;
     }
 
     public async Task<bool> DeleteMissions(Guid id)

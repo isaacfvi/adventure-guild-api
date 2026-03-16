@@ -1,4 +1,4 @@
-public enum UpdateAdventurousResult
+public enum RestResult
 {
     NotFound,
     NoFields,
