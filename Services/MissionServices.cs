@@ -36,7 +36,7 @@ public class MissionService
             Task = request.Task,
             Reward = request.Reward,
             GuildId = request.GuildId,
-            Status = Status.Available,
+            Status = MissionStatus.Available,
             CreatedAt = DateTime.UtcNow
         };
 
