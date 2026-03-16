@@ -24,7 +24,7 @@ public class GuildsController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<Guild>> GetById(Guid id)
     {
-        var guild = _guildServices.GetGuild(id);
+        var guild = await _guildServices.GetGuild(id);
 
         if (guild == null)
             return NotFound();
