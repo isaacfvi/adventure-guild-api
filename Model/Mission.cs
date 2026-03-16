@@ -18,6 +18,8 @@ public class Mission
     public string Name { get; set; }
     public string Task { get; set; }
     public float Reward { get; set; }
+    public Guid GuildId {get; set;}
+    [BsonRepresentation(BsonType.String)]
     public Status Status { get; set; }
     public DateTime CreatedAt { get; set; }
 }

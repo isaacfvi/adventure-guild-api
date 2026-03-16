@@ -1,6 +1,7 @@
 using MongoDB.Driver;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Serializers;
+using System.Text.Json.Serialization;
 using DotNetEnv;
 
 Env.Load();
@@ -14,6 +15,13 @@ builder.Services.AddRouting(options =>
 {
     options.LowercaseUrls = true;
 });
+
+builder.Services
+    .AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 
 // MongoDB Config
 var mongoConnection = Environment.GetEnvironmentVariable("MONGO_CONNECTION");
