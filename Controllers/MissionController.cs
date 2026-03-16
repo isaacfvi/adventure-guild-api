@@ -6,10 +6,12 @@ using MongoDB.Driver;
 public class MissionsController : ControllerBase
 {
     private MissionService _missionServices;
+    private MissionAcceptedService _acceptedMissionServices;
 
     public MissionsController(IMongoDatabase database)
     {
         _missionServices = new MissionService(database);
+        _acceptedMissionServices = new MissionAcceptedService(database);
     }
 
     // GET /missions
@@ -50,6 +52,21 @@ public class MissionsController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = mission.Id }, mission);
     }
 
+    // POST /missions/{id}/accept
+    [HttpPost("{id:guid}/accept")]
+    public async Task<ActionResult<AcceptedMission>> Accept(Guid id, AcceptMissionRequest request)
+    {
+        var result = await _acceptedMissionServices.AcceptMission(id, request);
+
+        return result switch
+        {
+            RestResult.NotFound => NotFound(),
+            RestResult.Conflict => BadRequest("Mission is already completed"),
+            RestResult.NoContent => NoContent(),
+            _ => StatusCode(500)
+        };
+    }
+
     // PUT /missions/{id}
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, UpdateMissionRequest request)
@@ -78,9 +95,9 @@ public class MissionsController : ControllerBase
 
         return result switch
         {
-            UpdateMissionResult.NotFound => NotFound(),
-            UpdateMissionResult.NoFields => BadRequest("No fields to update."),
-            UpdateMissionResult.Updated => NoContent(),
+            RestResult.NotFound => NotFound(),
+            RestResult.NoFields => BadRequest("No fields to update."),
+            RestResult.Updated => NoContent(),
             _ => StatusCode(500)
         };
     }

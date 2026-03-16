@@ -2,5 +2,9 @@ public enum RestResult
 {
     NotFound,
     NoFields,
-    Updated
+    Updated,
+    NoContent,
+    Ok,
+    BadRequest,
+    Conflict
 }
