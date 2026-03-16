@@ -67,6 +67,21 @@ public class MissionsController : ControllerBase
         };
     }
 
+    // POST /missions/{id}/complete
+    [HttpPost("{id:guid}/complete")]
+    public async Task<ActionResult<AcceptedMission>> Complete(Guid id, CompleteMissionRequest request)
+    {
+        var result = await _acceptedMissionServices.CompleteMission(id, request);
+
+        return result switch
+        {
+            RestResult.NotFound => NotFound(),
+            RestResult.Conflict => BadRequest("Mission is already completed"),
+            RestResult.NoContent => NoContent(),
+            _ => StatusCode(500)
+        };
+    }
+
     // PUT /missions/{id}
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, UpdateMissionRequest request)

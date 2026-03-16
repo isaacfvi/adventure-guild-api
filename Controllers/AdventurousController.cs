@@ -6,10 +6,12 @@ using MongoDB.Driver;
 public class AdventurousController : ControllerBase
 {
     private AdventurousService _adventurousServices;
+    private MissionAcceptedService _missionAcceptedServices;
 
     public AdventurousController(IMongoDatabase database)
     {
         _adventurousServices = new AdventurousService(database);
+        _missionAcceptedServices = new MissionAcceptedService(database);
     }
 
     // GET /Adventurous
@@ -24,12 +26,23 @@ public class AdventurousController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<Adventurous>> GetById(Guid id)
     {
-        var Adventurouss = await _adventurousServices.GetAdventurous(id);
+        var Adventurous = await _adventurousServices.GetAdventurous(id);
 
-        if (Adventurouss == null)
+        if (Adventurous == null)
             return NotFound();
 
-        return Ok(Adventurouss);
+        return Ok(Adventurous);
+    }
+
+    [HttpGet("{id:guid}/missions")]
+    public async Task<ActionResult<List<Mission>>> GetAdventurousMissions(Guid id)
+    {
+        var Missions = await _missionAcceptedServices.GetAdventurousMissions(id);
+
+        if(Missions == null)
+            return NotFound();
+
+        return Ok(Missions);
     }
 
     // POST /Adventurous
@@ -74,6 +87,4 @@ public class AdventurousController : ControllerBase
             _ => StatusCode(500)
         };
     }
-
-    
 }
