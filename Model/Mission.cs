@@ -2,11 +2,6 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 using System.Text.Json.Serialization;
-public enum Status
-{
-    Available,
-    Completed
-}
 
 public class Mission
 {
@@ -20,6 +15,7 @@ public class Mission
     public float Reward { get; set; }
     public Guid GuildId {get; set;}
     [BsonRepresentation(BsonType.String)]
-    public Status Status { get; set; }
+    public Guid? WinnerAdventurous {get; set;}
+    public MissionStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
 }
