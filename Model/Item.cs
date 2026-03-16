@@ -9,7 +9,7 @@ class Item
     [BsonRepresentation(BsonType.ObjectId)]
     public string? DbId { get; set; }
     public Guid Id { get; set; } = Guid.NewGuid();
-    public string Name { get; set; }
+    public required string Name { get; set; }
     public float Cost { get; set; }
     public DateTime CreatedAt { get; set; }
 }
