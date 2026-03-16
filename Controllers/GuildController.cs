@@ -34,10 +34,15 @@ public class GuildsController : ControllerBase
 
     // POST /guilds
     [HttpPost]
-    public async Task<ActionResult<Guild>> Create(Guild guild)
+    public async Task<ActionResult<Guild>> Create(CreateGuildRequest request)
     {
-        guild.CreatedAt = DateTime.UtcNow;
-        guild.Id = Guid.NewGuid();
+        var guild = new Guild
+        {
+            Id = Guid.NewGuid(),
+            Name = request.Name,
+            CreatedAt = DateTime.UtcNow
+        };
+
         await _guilds.InsertOneAsync(guild);
 
         return CreatedAtAction(nameof(GetById), new { id = guild.Id }, guild);
@@ -45,10 +50,13 @@ public class GuildsController : ControllerBase
 
     // PUT /guilds/{id}
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, Guild updatedGuild)
+    public async Task<IActionResult> Update(Guid id, UpdateGuildRequest request)
     {
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return BadRequest("Name is required.");
+            
         var update = Builders<Guild>.Update
-            .Set(g => g.Name, updatedGuild.Name);
+            .Set(g => g.Name, request.Name);
 
         var result = await _guilds.UpdateOneAsync(g => g.Id == id, update);
 

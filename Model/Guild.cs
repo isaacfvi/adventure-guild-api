@@ -9,7 +9,6 @@ public class Guild
     public string? DbId { get; set; }
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name {get; set;}
-    public Mission[] Missions { get; set; } = Array.Empty<Mission>();
     public DateTime CreatedAt {get; set;}
 
 }
