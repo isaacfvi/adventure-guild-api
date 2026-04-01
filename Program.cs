@@ -41,6 +41,11 @@ MongoDB.Bson.Serialization.BsonSerializer.RegisterSerializer(
     new GuidSerializer(GuidRepresentation.Standard)
 );
 
+// RabbitMQ 
+builder.Services.AddSingleton<RabbitMqConnection>();
+builder.Services.AddSingleton<IEventBus, RabbitMqEventBus>();
+builder.Services.AddHostedService<AuditConsumer>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())

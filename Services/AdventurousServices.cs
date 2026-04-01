@@ -1,12 +1,17 @@
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
 public class AdventurousService
 {
     private readonly IMongoCollection<Adventurous> _adventurous;
+    private readonly IEventBus _eventBus;
+    private readonly ILogger<AdventurousService> _logger;
 
-    public AdventurousService(IMongoDatabase database)
+    public AdventurousService(IMongoDatabase database, IEventBus eventBus, ILogger<AdventurousService> logger)
     {
         _adventurous = database.GetCollection<Adventurous>("adventurous");
+        _eventBus = eventBus;
+        _logger = logger;
     }
 
     public async Task<List<Adventurous>> GetAdventurous()
@@ -32,6 +37,21 @@ public class AdventurousService
         };
 
         await _adventurous.InsertOneAsync(Adventurous);
+
+        try
+        {
+            _eventBus.Publish(new AdventurerCreatedEvent
+            {
+                AdventurerId = Adventurous.Id,
+                Name = Adventurous.Name,
+                Class = Adventurous.Class,
+                Level = Adventurous.Level
+            }, "adventurer.created");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Falha ao publicar AdventurerCreatedEvent para o aventureiro {AdventurerId}", Adventurous.Id);
+        }
 
         return Adventurous;
     }

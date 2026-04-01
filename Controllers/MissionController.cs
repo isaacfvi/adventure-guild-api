@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
 [ApiController]
@@ -8,10 +9,10 @@ public class MissionsController : ControllerBase
     private MissionService _missionServices;
     private MissionAcceptedService _acceptedMissionServices;
 
-    public MissionsController(IMongoDatabase database)
+    public MissionsController(IMongoDatabase database, IEventBus eventBus, ILogger<MissionAcceptedService> logger)
     {
         _missionServices = new MissionService(database);
-        _acceptedMissionServices = new MissionAcceptedService(database);
+        _acceptedMissionServices = new MissionAcceptedService(database, eventBus, logger);
     }
 
     // GET /missions

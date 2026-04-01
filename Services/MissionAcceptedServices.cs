@@ -5,12 +5,16 @@ public class MissionAcceptedService
     private readonly IMongoCollection<Mission> _missions;
     private readonly IMongoCollection<AcceptedMission> _acceptedMissions;
     private readonly IMongoCollection<Adventurous> _adventurous;
+    private readonly IEventBus _eventBus;
+    private readonly ILogger<MissionAcceptedService> _logger;
 
-    public MissionAcceptedService(IMongoDatabase database)
+    public MissionAcceptedService(IMongoDatabase database, IEventBus eventBus, ILogger<MissionAcceptedService> logger)
     {
         _missions = database.GetCollection<Mission>("missions");
         _acceptedMissions = database.GetCollection<AcceptedMission>("acceptedMissions");
         _adventurous = database.GetCollection<Adventurous>("adventurous");
+        _eventBus = eventBus;
+        _logger = logger;
     }
 
     public async Task<RestResult> AcceptMission(Guid id, AcceptMissionRequest request)
@@ -32,15 +36,30 @@ public class MissionAcceptedService
 
         await CreateMission(id, request.AdventurousId);
 
+        try
+        {
+            _eventBus.Publish(new MissionAcceptedEvent
+            {
+                MissionId = id,
+                AdventurerId = request.AdventurousId,
+                MissionName = mission.Name,
+                Reward = mission.Reward
+            }, "mission.accepted");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Falha ao publicar MissionAcceptedEvent para a missão {MissionId}", id);
+        }
+
         return RestResult.NoContent;
     }
 
-    private async Task CreateMission(Guid Missionid, Guid AdventurousId)
+    private async Task CreateMission(Guid MissionId, Guid AdventurousId)
     {
         var mission = new AcceptedMission
         {
             Id = Guid.NewGuid(),
-            MissionId = Missionid,
+            MissionId = MissionId,
             AdventurousId = AdventurousId,
             Status = MissionAcceptedStatus.InProgress,
             CreatedAt = DateTime.UtcNow
@@ -70,12 +89,27 @@ public class MissionAcceptedService
         if (acceptedMission == null) return RestResult.NotFound;
         if (acceptedMission.Status == MissionAcceptedStatus.Completed) return RestResult.Conflict;
 
-        var missionReward = await GetMissionReward(id);
+        var mission = await GetMission(id);
 
         await MarkOtherMissionsLost(id, acceptedMission.Id);
         await MarkMissionCompleted(acceptedMission.Id);
-        await GiveReward(acceptedMission.AdventurousId, missionReward);
+        await GiveReward(acceptedMission.AdventurousId, mission.Reward);
         await SetMissionWinner(id, acceptedMission.AdventurousId);
+
+        try
+        {
+            _eventBus.Publish(new MissionCompletedEvent
+            {
+                MissionId = id,
+                WinnerId = request.AdventurousId,
+                MissionName = mission.Name,
+                Reward = mission.Reward
+            }, "mission.completed");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Falha ao publicar MissionCompletedEvent para a missão {MissionId}", id);
+        }
 
         return RestResult.NoContent;
     }
@@ -84,15 +118,14 @@ public class MissionAcceptedService
     {
         return _acceptedMissions
             .Find(x => x.MissionId == missionId && x.AdventurousId == adventurousId)
-            .SingleOrDefaultAsync();
+            .FirstOrDefaultAsync();
     }
 
-    private Task<float> GetMissionReward(Guid missionId)
+    private Task<Mission> GetMission(Guid missionId)
     {
         return _missions
             .Find(x => x.Id == missionId)
-            .Project(m => m.Reward)
-            .SingleOrDefaultAsync();
+            .FirstOrDefaultAsync();
     }
 
     private Task MarkOtherMissionsLost(Guid missionId, Guid winnerAcceptedId)

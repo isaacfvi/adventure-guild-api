@@ -8,6 +8,7 @@ API RESTful desenvolvida em .NET 9.0 para gerenciamento de um sistema de guildas
 
 - **Framework**: .NET 9.0
 - **Banco de Dados**: MongoDB
+- **Mensageria**: RabbitMQ (via `RabbitMQ.Client`)
 - **Linguagem**: C#
 - **Padrão Arquitetural**: MVC com Services
 - **Serialização**: System.Text.Json com suporte a enums
@@ -30,6 +31,13 @@ API RESTful desenvolvida em .NET 9.0 para gerenciamento de um sistema de guildas
 - Cadastro de aventureiros com nome e saldo de ouro
 - Controle de missão ativa
 - Sistema de inventário para itens adquiridos
+
+### Mensageria (RabbitMQ)
+- Publicação de eventos de domínio de forma assíncrona via exchange `adventure-guild` (tipo `topic`)
+- Eventos publicados: `adventurer.created`, `mission.accepted`, `mission.completed`
+- `AuditConsumer` consome todos os eventos (`#`) e os registra em log para auditoria
+- Fila de auditoria com Dead Letter Queue (DLQ) para mensagens com falha de processamento
+- Falhas na publicação são isoladas e não interrompem as operações de negócio
 
 ### Lojas e Comércio
 - Três tipos de lojas: `Blacksmith`, `MagicArtifacts`, `Tavern`
@@ -98,29 +106,42 @@ API RESTful desenvolvida em .NET 9.0 para gerenciamento de um sistema de guildas
 
 ### Pré-requisitos
 - .NET 9.0 SDK
-- MongoDB (local ou nuvem)
-- Docker (opcional)
+- Docker
 
 ### Configuração
 
-#### 1. Subir o MongoDB com Docker
-```bash
-docker run -d --name mongodb-adventure-guild -p 27017:27017 mongo:latest
-```
-
-#### 2. Configurar Variáveis de Ambiente
-Crie o arquivo `.env` na raiz do projeto com:
+#### 1. Configurar Variáveis de Ambiente
+Crie o arquivo `.env` na raiz do projeto:
 ```
 MONGO_CONNECTION=mongodb://localhost:27017
 MONGO_DATABASE=adventure_guild
+
+RABBITMQ_HOST=localhost
+RABBITMQ_PORT=5672
+RABBITMQ_USER=guild_user
+RABBITMQ_PASS=Password123
 ```
 
-#### 3. Executar o Projeto
+#### 2. Subir os containers
+```bash
+docker compose up -d
+```
+
+#### 3. Criar o usuário do RabbitMQ
+O `RABBITMQ_DEFAULT_USER/PASS` pode não ser aplicado automaticamente dependendo da versão da imagem. Após os containers subirem, crie o usuário manualmente:
+
+```bash
+docker exec rabbitmq-adventure-guild rabbitmqctl add_user guild_user Password123
+docker exec rabbitmq-adventure-guild rabbitmqctl set_user_tags guild_user administrator
+docker exec rabbitmq-adventure-guild rabbitmqctl set_permissions -p / guild_user ".*" ".*" ".*"
+```
+
+> Isso só precisa ser feito uma vez. O volume persiste o estado do RabbitMQ entre reinicializações.
+
+#### 4. Executar o Projeto
 ```bash
 dotnet run
 ```
-
-**Nota**: O MongoDB foi configurado para rodar em container Docker para facilitar o desenvolvimento e garantir consistência entre ambientes.
 
 ### Documentação da API
 - Acesse `http://localhost:5017/openapi` para documentação interativa
@@ -135,6 +156,11 @@ adventure-guild-api/
 ├── Services/            # Lógica de negócio
 ├── Requests/            # DTOs de requisição
 ├── Enums/               # Enumerações do sistema
+├── Messaging/
+│   ├── Events/          # Eventos de domínio (DomainEvent, AdventurerCreatedEvent, etc.)
+│   ├── Publisher/       # IEventBus e RabbitMqEventBus
+│   ├── Consumer/        # AuditConsumer (IHostedService)
+│   └── Connection/      # RabbitMqConnection
 ├── Program.cs           # Configuração da aplicação
 └── README.md            # Documentação
 ```
