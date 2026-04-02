@@ -49,6 +49,14 @@ public class AuditConsumer : IHostedService
             arguments: queueArgs,
             cancellationToken: cancellationToken);
 
+        // Ensure exchange exists before binding
+        await _channel.ExchangeDeclareAsync(
+            exchange: ExchangeName,
+            type: ExchangeType.Topic,
+            durable: true,
+            autoDelete: false,
+            cancellationToken: cancellationToken);
+
         // Bind to exchange with wildcard — receives all events
         await _channel.QueueBindAsync(
             queue: QueueName,
