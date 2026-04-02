@@ -144,7 +144,7 @@ dotnet run
 ```
 
 ### Documentação da API
-- Acesse `http://localhost:5017/openapi` para documentação interativa
+- Acesse `http://localhost:5017/scalar/v1` para documentação interativa (Scalar UI)
 - Os endpoints estão disponíveis em `http://localhost:5017`
 
 ## 📦 Estrutura do Projeto
