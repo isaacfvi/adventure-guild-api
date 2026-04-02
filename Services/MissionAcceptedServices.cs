@@ -91,10 +91,26 @@ public class MissionAcceptedService
 
         var mission = await GetMission(id);
 
-        await MarkOtherMissionsLost(id, acceptedMission.Id);
-        await MarkMissionCompleted(acceptedMission.Id);
-        await GiveReward(acceptedMission.AdventurousId, mission.Reward);
-        await SetMissionWinner(id, acceptedMission.AdventurousId);
+        using var session = await _missions.Database.Client.StartSessionAsync();
+        session.StartTransaction();
+
+        try
+        {
+            await Task.WhenAll(
+                MarkOtherMissionsLost(session, id, acceptedMission.Id),
+                MarkMissionCompleted(session, acceptedMission.Id),
+                GiveReward(session, acceptedMission.AdventurousId, mission.Reward),
+                SetMissionWinner(session, id, acceptedMission.AdventurousId)
+            );
+
+            await session.CommitTransactionAsync();
+        }
+        catch (Exception ex)
+        {
+            await session.AbortTransactionAsync();
+            _logger.LogError(ex, "Falha ao completar missão {MissionId}, transação revertida", id);
+            throw;
+        }
 
         try
         {
@@ -128,42 +144,45 @@ public class MissionAcceptedService
             .FirstOrDefaultAsync();
     }
 
-    private Task MarkOtherMissionsLost(Guid missionId, Guid winnerAcceptedId)
+    private Task MarkOtherMissionsLost(IClientSessionHandle session, Guid missionId, Guid winnerAcceptedId)
     {
         var update = Builders<AcceptedMission>.Update
             .Set(m => m.Status, MissionAcceptedStatus.Lost);
         return _acceptedMissions.UpdateManyAsync(
+            session,
             m => m.MissionId == missionId && m.Id != winnerAcceptedId,
             update
         );
     }
 
-    private Task MarkMissionCompleted(Guid acceptedId)
+    private Task MarkMissionCompleted(IClientSessionHandle session, Guid acceptedId)
     {
         var update = Builders<AcceptedMission>.Update
             .Set(m => m.Status, MissionAcceptedStatus.Completed);
         return _acceptedMissions.UpdateOneAsync(
+            session,
             m => m.Id == acceptedId,
             update
         );
     }
 
-    private Task GiveReward(Guid adventurousId, float reward)
+    private Task GiveReward(IClientSessionHandle session, Guid adventurousId, float reward)
     {
         var update = Builders<Adventurous>.Update.Inc(a => a.Money, reward);
         return _adventurous.UpdateOneAsync(
+            session,
             a => a.Id == adventurousId,
             update
         );
     }
 
-    private Task SetMissionWinner(Guid missionId, Guid adventurousId)
+    private Task SetMissionWinner(IClientSessionHandle session, Guid missionId, Guid adventurousId)
     {
         var update = Builders<Mission>.Update.Set(m => m.WinnerAdventurous, adventurousId);
         return _missions.UpdateOneAsync(
+            session,
             m => m.Id == missionId,
             update
         );
     }
-
 }

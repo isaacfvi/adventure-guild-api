@@ -2,11 +2,20 @@ services:
   mongodb:
     image: mongo:latest
     container_name: mongodb-adventure-guild
+    command: ["--replSet", "rs0", "--bind_ip_all"]
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
-      - ./mongo-seed:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: |
+        mongosh --quiet --eval "
+          try { rs.status().ok } catch(e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}).ok }
+        "
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
 
   rabbitmq:
     image: rabbitmq:3-management

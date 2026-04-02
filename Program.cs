@@ -3,6 +3,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Serializers;
 using System.Text.Json.Serialization;
 using DotNetEnv;
+using Scalar.AspNetCore;
 
 Env.Load();
 
@@ -51,6 +52,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
 app.UseHttpsRedirection();
