@@ -1,13 +1,14 @@
-using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 
 public class MissionService
 {
     private readonly IMongoCollection<Mission> _missions;
+    private readonly IMongoCollection<Guild> _guilds;
 
     public MissionService(IMongoDatabase database)
     {
         _missions = database.GetCollection<Mission>("missions");
+        _guilds = database.GetCollection<Guild>("guilds");
     }
 
     public async Task<List<Mission>> GetMissions()
@@ -27,8 +28,12 @@ public class MissionService
             .ToListAsync();
     }
 
-    public async Task<Mission> CreateMissions(CreateMissionRequest request)
+    public async Task<(RestResult, Mission?)> CreateMissions(CreateMissionRequest request)
     {
+        var guildExists = await _guilds.Find(g => g.Id == request.GuildId).AnyAsync();
+        if (!guildExists)
+            return (RestResult.NotFound, null);
+
         var mission = new Mission
         {
             Id = Guid.NewGuid(),
@@ -42,7 +47,7 @@ public class MissionService
 
         await _missions.InsertOneAsync(mission);
 
-        return mission;
+        return (RestResult.Ok, mission);
     }
 
     public async Task<bool> UpdateMissions(Guid id, UpdateMissionRequest request)
@@ -71,7 +76,16 @@ public class MissionService
             updates.Add(Builders<Mission>.Update.Set(m => m.Reward, request.Reward.Value));
 
         if (request.Status.HasValue)
+        {
+            var current = await _missions.Find(m => m.Id == id).FirstOrDefaultAsync();
+            if (current == null)
+                return RestResult.NotFound;
+
+            if (current.Status == MissionStatus.Completed && request.Status.Value == MissionStatus.Available)
+                return RestResult.BadRequest;
+
             updates.Add(Builders<Mission>.Update.Set(m => m.Status, request.Status.Value));
+        }
 
         if (updates.Count == 0)
             return RestResult.NoFields;

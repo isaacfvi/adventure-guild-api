@@ -48,9 +48,12 @@ public class MissionsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Mission>> Create(CreateMissionRequest request)
     {
-        var mission = await _missionServices.CreateMissions(request);
+        var (result, mission) = await _missionServices.CreateMissions(request);
 
-        return CreatedAtAction(nameof(GetById), new { id = mission.Id }, mission);
+        if (result == RestResult.NotFound)
+            return NotFound("Guild not found.");
+
+        return CreatedAtAction(nameof(GetById), new { id = mission!.Id }, mission);
     }
 
     // POST /missions/{id}/accept
@@ -113,6 +116,7 @@ public class MissionsController : ControllerBase
         {
             RestResult.NotFound => NotFound(),
             RestResult.NoFields => BadRequest("No fields to update."),
+            RestResult.BadRequest => BadRequest("Invalid status transition."),
             RestResult.Updated => NoContent(),
             _ => StatusCode(500)
         };

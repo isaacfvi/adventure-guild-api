@@ -52,6 +52,6 @@ public class GuildService
     {
         var result = await _guilds.DeleteOneAsync(g => g.Id == id);
 
-        return result.DeletedCount == 0;
+        return result.DeletedCount > 0;
     }
 }
