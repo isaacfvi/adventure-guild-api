@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
@@ -47,6 +48,7 @@ public class AdventurousController : ControllerBase
     }
 
     // POST /Adventurous
+    [AllowAnonymous]
     [HttpPost]
     public async Task<ActionResult<Adventurous>> Create(CreateAdventurousRequest request)
     {

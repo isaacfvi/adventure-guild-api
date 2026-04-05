@@ -10,7 +10,6 @@ Env.Load();
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
-builder.Services.AddControllers();
 
 builder.Services.AddRouting(options =>
 {
@@ -42,10 +41,16 @@ MongoDB.Bson.Serialization.BsonSerializer.RegisterSerializer(
     new GuidSerializer(GuidRepresentation.Standard)
 );
 
-// RabbitMQ 
+// RabbitMQ
 builder.Services.AddSingleton<RabbitMqConnection>();
 builder.Services.AddSingleton<IEventBus, RabbitMqEventBus>();
 builder.Services.AddHostedService<AuditConsumer>();
+
+// Middlewares
+builder.Services.AddErrorHandling();
+builder.Services.AddJwtAuthentication();
+builder.Services.AddRequestLogging();
+builder.Services.AddRateLimiting();
 
 var app = builder.Build();
 
@@ -56,6 +61,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseErrorHandling();
+app.UseRateLimiter();
+app.UseRequestLogging();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 
 app.Run();

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 
@@ -13,6 +14,7 @@ public class GuildsController : ControllerBase
     }
 
     // GET /guilds
+    [AllowAnonymous]
     [HttpGet]
     public async Task<ActionResult<List<Guild>>> Get()
     {
@@ -21,6 +23,7 @@ public class GuildsController : ControllerBase
     }
 
     // GET /guilds/{id}
+    [AllowAnonymous]
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<Guild>> GetById(Guid id)
     {
@@ -33,6 +36,7 @@ public class GuildsController : ControllerBase
     }
 
     // POST /guilds
+    [Authorize(Roles = "Guild_Master")]
     [HttpPost]
     public async Task<ActionResult<Guild>> Create(CreateGuildRequest request)
     {
@@ -42,6 +46,7 @@ public class GuildsController : ControllerBase
     }
 
     // PUT /guilds/{id}
+    [Authorize(Roles = "Guild_Master")]
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, UpdateGuildRequest request)
     {
@@ -55,6 +60,7 @@ public class GuildsController : ControllerBase
     }
 
     // DELETE /guilds/{id}
+    [Authorize(Roles = "Guild_Master")]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {

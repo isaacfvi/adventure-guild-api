@@ -13,6 +13,8 @@ API RESTful desenvolvida em .NET 9.0 para gerenciamento de um sistema de guildas
 - **Padrão Arquitetural**: MVC com Services
 - **Serialização**: System.Text.Json com suporte a enums
 - **Configuração**: Environment Variables (.env)
+- **Autenticação**: JWT Bearer (`Microsoft.AspNetCore.Authentication.JwtBearer`)
+- **Rate Limiting**: `Microsoft.AspNetCore.RateLimiting` (nativo .NET 9)
 
 ## 🎮 Funcionalidades Implementadas
 
@@ -34,10 +36,24 @@ API RESTful desenvolvida em .NET 9.0 para gerenciamento de um sistema de guildas
 
 ### Mensageria (RabbitMQ)
 - Publicação de eventos de domínio de forma assíncrona via exchange `adventure-guild` (tipo `topic`)
-- Eventos publicados: `adventurer.created`, `mission.accepted`, `mission.completed`
+- Eventos de negócio publicados: `adventurer.created`, `mission.accepted`, `mission.completed`
+- Eventos de infraestrutura publicados pelos middlewares: `http.request.audit` (toda requisição) e `http.error.audit` (erros 500)
 - `AuditConsumer` consome todos os eventos (`#`) e os registra em log para auditoria
 - Fila de auditoria com Dead Letter Queue (DLQ) para mensagens com falha de processamento
 - Falhas na publicação são isoladas e não interrompem as operações de negócio
+
+### Middlewares
+- **ErrorHandlingMiddleware** — captura exceções não tratadas e retorna `ErrorResponse` padronizado; publica evento `http.error.audit` em erros 500
+- **RateLimitingMiddleware** — limita requisições por IP (Fixed Window); retorna 429 com header `Retry-After`
+- **RequestLoggingMiddleware** — loga metadados de entrada/saída com Correlation ID; publica evento `http.request.audit` após cada requisição
+- **AuthMiddleware** — valida JWT Bearer; retorna `ErrorResponse` 401/403 padronizado
+
+Pipeline de execução: `ErrorHandling → RateLimiting → RequestLogging → Authentication → Authorization → Controllers`
+
+### Autenticação e Autorização
+- Autenticação via JWT Bearer com validação de assinatura, emissor, audiência e expiração
+- Dois papéis: `Guild_Master` (gerencia guildas e missões) e `Adventurer` (aceita e completa missões)
+- Endpoint `POST /auth/token` para geração de tokens de teste (apenas para fins de portfólio)
 
 ### Lojas e Comércio
 - Três tipos de lojas: `Blacksmith`, `MagicArtifacts`, `Tavern`
@@ -52,27 +68,28 @@ API RESTful desenvolvida em .NET 9.0 para gerenciamento de um sistema de guildas
 
 ## 🎯 Endpoints da API
 
+### Auth
+- `POST /auth/token` - Gerar token JWT para testes (body: `{ "role": "Guild_Master" }` ou `{ "role": "Adventurer" }`)
+
 ### Guildas
-- `GET /guilds` - Listar todas as guildas
-- `POST /guilds` - Criar nova guilda
+- `GET /guilds` - Listar todas as guildas _(público)_
+- `GET /guilds/{id}` - Buscar guilda por ID _(público)_
+- `POST /guilds` - Criar nova guilda _(requer Guild_Master)_
+- `PUT /guilds/{id}` - Atualizar guilda _(requer Guild_Master, apenas o criador)_
+- `DELETE /guilds/{id}` - Remover guilda _(requer Guild_Master, apenas o criador)_
 
 ### Missões
-- `GET /missions` - Listar todas as missões
-- `POST /missions` - Criar nova missão
-- `POST /missions/{id}/accept` - Aceitar uma missão
-- `POST /missions/{id}/complete` - Completar uma missão
+- `GET /missions` - Listar todas as missões _(público)_
+- `GET /missions/{id}` - Buscar missão por ID _(público)_
+- `POST /missions` - Criar nova missão _(requer Guild_Master)_
+- `PUT /missions/{id}` - Atualizar missão _(requer Guild_Master)_
+- `PATCH /missions/{id}` - Atualizar parcialmente _(requer Guild_Master)_
+- `DELETE /missions/{id}` - Remover missão _(requer Guild_Master)_
+- `POST /missions/{id}/accept` - Aceitar uma missão _(requer Adventurer)_
+- `POST /missions/{id}/complete` - Completar uma missão _(requer Adventurer)_
 
 ### Aventureiros
-- `GET /adventurers` - Listar todos os aventureiros
-- `POST /adventurers` - Criar novo aventureiro
-
-### Lojas
-- `GET /shops` - Listar todas as lojas
-- `POST /shops` - Criar nova loja
-
-### Comércio
-- `POST /shops/{shopId}/buy/{itemId}` - Comprar item em loja
-- `POST /shops/{shopId}/sell/{itemId}` - Vender item para loja
+- `POST /adventurous` - Criar novo aventureiro _(público)_
 
 ## 🔄 Fluxos Principais do Sistema
 
@@ -120,6 +137,13 @@ RABBITMQ_HOST=localhost
 RABBITMQ_PORT=5672
 RABBITMQ_USER=guild_user
 RABBITMQ_PASS=Password123
+
+JWT_SECRET=sua-chave-secreta-com-minimo-32-caracteres
+JWT_ISSUER=adventure-guild-api
+JWT_AUDIENCE=adventure-guild-clients
+
+RATE_LIMIT_MAX_REQUESTS=100
+RATE_LIMIT_WINDOW_SECONDS=60
 ```
 
 #### 2. Subir os containers
@@ -147,6 +171,13 @@ dotnet run
 - Acesse `http://localhost:5017/scalar/v1` para documentação interativa (Scalar UI)
 - Os endpoints estão disponíveis em `http://localhost:5017`
 
+### Testando com autenticação
+1. Gere um token: `POST /auth/token` com body `{ "role": "Guild_Master" }`
+2. Copie o valor do campo `token` da resposta
+3. Nas requisições protegidas, adicione o header: `Authorization: Bearer <token>`
+
+> O token expira em 8 horas. Gere um novo quando necessário.
+
 ## 📦 Estrutura do Projeto
 
 ```
@@ -155,9 +186,18 @@ adventure-guild-api/
 ├── Model/               # Modelos de dados (Entidades)
 ├── Services/            # Lógica de negócio
 ├── Requests/            # DTOs de requisição
+│   ├── Auth/            # GenerateTokenRequest
+│   ├── Adventurous/
+│   ├── Guilds/
+│   └── Missions/
+├── Middlewares/
+│   ├── ErrorHandlingMiddleware.cs
+│   ├── RequestLoggingMiddleware.cs
+│   ├── IAppMiddleware.cs
+│   └── Extensions/      # Métodos de extensão para registro no pipeline
 ├── Enums/               # Enumerações do sistema
 ├── Messaging/
-│   ├── Events/          # Eventos de domínio (DomainEvent, AdventurerCreatedEvent, etc.)
+│   ├── Events/          # DomainEvent base + eventos de negócio e infraestrutura
 │   ├── Publisher/       # IEventBus e RabbitMqEventBus
 │   ├── Consumer/        # AuditConsumer (IHostedService)
 │   └── Connection/      # RabbitMqConnection

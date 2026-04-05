@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
@@ -16,6 +17,7 @@ public class MissionsController : ControllerBase
     }
 
     // GET /missions
+    [AllowAnonymous]
     [HttpGet]
     public async Task<ActionResult<List<Mission>>> Get()
     {
@@ -24,6 +26,7 @@ public class MissionsController : ControllerBase
     }
 
     // GET /missions/{id}
+    [AllowAnonymous]
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<Mission>> GetById(Guid id)
     {
@@ -45,6 +48,7 @@ public class MissionsController : ControllerBase
     }
 
     // POST /missions
+    [Authorize(Roles = "Guild_Master")]
     [HttpPost]
     public async Task<ActionResult<Mission>> Create(CreateMissionRequest request)
     {
@@ -57,6 +61,7 @@ public class MissionsController : ControllerBase
     }
 
     // POST /missions/{id}/accept
+    [Authorize(Roles = "Adventurer")]
     [HttpPost("{id:guid}/accept")]
     public async Task<ActionResult<AcceptedMission>> Accept(Guid id, AcceptMissionRequest request)
     {
@@ -72,6 +77,7 @@ public class MissionsController : ControllerBase
     }
 
     // POST /missions/{id}/complete
+    [Authorize(Roles = "Adventurer")]
     [HttpPost("{id:guid}/complete")]
     public async Task<ActionResult<AcceptedMission>> Complete(Guid id, CompleteMissionRequest request)
     {
@@ -87,6 +93,7 @@ public class MissionsController : ControllerBase
     }
 
     // PUT /missions/{id}
+    [Authorize(Roles = "Guild_Master")]
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, UpdateMissionRequest request)
     {
@@ -97,6 +104,7 @@ public class MissionsController : ControllerBase
     }
 
     // DELETE /missions/{id}
+    [Authorize(Roles = "Guild_Master")]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
@@ -107,6 +115,7 @@ public class MissionsController : ControllerBase
     }
 
     // PATCH /missions/{id}
+    [Authorize(Roles = "Guild_Master")]
     [HttpPatch("{id:guid}")]
     public async Task<IActionResult> Patch(Guid id, PatchMissionRequest request)
     {
