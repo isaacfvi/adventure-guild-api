@@ -51,6 +51,7 @@ builder.Services.AddErrorHandling();
 builder.Services.AddJwtAuthentication();
 builder.Services.AddRequestLogging();
 builder.Services.AddRateLimiting();
+builder.Services.AddInputValidation();
 
 var app = builder.Build();
 
